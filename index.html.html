@@ -473,7 +473,7 @@
         
         <!-- Ad 41: Popunder -->
         <div class="ad-item">
-            <script type='text/javascript' src='//pl27334240.profitableratecpm.com/3b/84/7d/3b847d77319cbc840670e88859ba2ac5.js'></script>
+            <script type='text/javascript' src='//pl27334440.profitableratecpm.com/3b/84/7d/3b847d77319cbc840670e88859ba2ac5.js'></script>
         </div>
         
         <!-- Ad 42: Native Banner -->
@@ -709,7 +709,7 @@
         
         <!-- Ad 64: Social Bar -->
         <div class="ad-item">
-            <script type='text/javascript' src='//pl27334153.profitableratecpm.com/0a/2f/85/0a2f85f254d30df5b7ad0e026437e750.js'></script>
+            <script type='text/javascript' src='//pl27334453.profitableratecpm.com/0a/2f/85/0a2f85f254d30df5b7ad0e026437e750.js'></script>
         </div>
         
         <!-- Ad 65: Banner 300x250 -->
@@ -1126,7 +1126,10 @@
         // Direct link URLs from your ads
         const directLinkUrls = [
             'https://www.profitableratecpm.com/hq3wrnug15?key=261e5ca0f67df0323bc77ed0d93c8d95',
-            'https://www.profitableratecpm.com/c6tdmk57jg?key=669316cbe5c926e860e72bb0df22a6b9'
+            'https://www.profitableratecpm.com/c6tdmk57jg?key=669316cbe5c926e860e72bb0df22a6b9',
+            'https://www.profitableratecpm.com/pb4sqy3b?key=c8041fb28dd9975358c7e6509417efb3',
+            'https://www.profitableratecpm.com/ugabe2kvj?key=382aa68d7bff2f608477600c14649f17',
+            'https://www.profitableratecpm.com/k4fkn0ifvm?key=67fcceba3f7c216ce15667bfd98d3f66'
         ];
         
         // Auto-scroll function to ensure all ads get impressions
@@ -1145,7 +1148,7 @@
                 if (progress < 1) {
                     window.requestAnimationFrame(scrollStep);
                 } else {
-                    // Once scrolling is complete, prepare for redirect
+                    // Once scrolling is complete, start the redirect sequence
                     setTimeout(startRedirectSequence, 500);
                 }
             }
@@ -1169,29 +1172,87 @@
             return true;
         }
         
+        // Get current redirect index from URL or localStorage
+        function getCurrentRedirectIndex() {
+            // Check URL parameter first
+            const urlParams = new URLSearchParams(window.location.search);
+            const fromIndex = urlParams.get('fromIndex');
+            
+            if (fromIndex !== null) {
+                // If we're coming from a specific index, go to the next one
+                const nextIndex = (parseInt(fromIndex) + 1) % directLinkUrls.length;
+                return nextIndex;
+            }
+            
+            // Check localStorage next
+            const storedIndex = localStorage.getItem('redirectIndex');
+            if (storedIndex !== null) {
+                return parseInt(storedIndex);
+            }
+            
+            // Default to first link
+            return 0;
+        }
+        
         // Redirect sequence function
         function startRedirectSequence() {
-            // First go to the first direct link
-            window.location.href = directLinkUrls[0];
+            const currentIndex = getCurrentRedirectIndex();
             
-            // The second redirect will be handled by browser history manipulation
-            // on the destination page or with a fallback mechanism
+            // Store the next index for when we return
+            const nextIndex = (currentIndex + 1) % directLinkUrls.length;
+            localStorage.setItem('redirectIndex', nextIndex);
+            
+            // Redirect to the current URL with fromIndex parameter
+            window.location.href = directLinkUrls[currentIndex] + '&fromIndex=' + currentIndex;
         }
         
         // Handle back button by redirecting to direct links
         function setupBackButtonRedirect() {
-            // Push a state so we can detect when user presses back
-            history.pushState({page: 1}, "", "");
+            // More aggressive approach to handle back button
             
-            window.onpopstate = function() {
-                // When back button is pressed, redirect to a random direct link
-                const randomIndex = Math.floor(Math.random() * directLinkUrls.length);
-                window.location.replace(directLinkUrls[randomIndex]);
-            };
+            // 1. Push multiple states to make back button press require more clicks
+            for (let i = 0; i < 5; i++) {
+                history.pushState({page: i + 1}, "", window.location.href);
+            }
+            
+            // 2. Set up the popstate handler
+            window.addEventListener('popstate', function(event) {
+                // Prevent the default back action
+                event.preventDefault();
+                
+                // Get the next link to redirect to
+                const redirectIndex = getCurrentRedirectIndex();
+                
+                // Redirect immediately to the next link
+                window.location.replace(directLinkUrls[redirectIndex] + '&fromIndex=' + redirectIndex);
+            });
+            
+            // 3. Override browser back button with more methods
+            window.addEventListener('beforeunload', function(event) {
+                // Store current position in redirect sequence for when page reloads
+                const redirectIndex = getCurrentRedirectIndex();
+                localStorage.setItem('redirectIndex', redirectIndex);
+            });
+            
+            // 4. Check if we arrived from another direct link and should continue the sequence
+            if (document.referrer && directLinkUrls.some(url => document.referrer.includes(url.split('?')[0]))) {
+                // If we came from one of our direct links, continue the sequence after a brief delay
+                setTimeout(startRedirectSequence, 1000);
+            }
         }
         
         // Main execution when DOM is loaded
         document.addEventListener('DOMContentLoaded', function() {
+            // Check if this is a returning visit within our redirect chain
+            const urlParams = new URLSearchParams(window.location.search);
+            const fromRedirect = urlParams.get('fromRedirect');
+            
+            // If we're returning from a redirect, continue the chain immediately
+            if (fromRedirect === 'true') {
+                startRedirectSequence();
+                return;
+            }
+            
             // Set up back button handler
             setupBackButtonRedirect();
             
